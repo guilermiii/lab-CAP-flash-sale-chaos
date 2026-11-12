@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: flashsale-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: flashsale
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d flashsale"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: flashsale-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.11.0
+    container_name: flashsale-toxiproxy
+    restart: unless-stopped
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    volumes:
+      - ./docker/toxiproxy.json:/config/toxiproxy.json:ro
+    ports:
+      - "8474:8474"   # API do Toxiproxy
+      - "25432:25432" # Proxy para PostgreSQL
+      - "26379:26379" # Proxy para Redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
