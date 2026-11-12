@@ -21,9 +21,16 @@ public class GlobalExceptionHandler {
         return problemDetail;
     }
 
-    @ExceptionHandler(ServiceUnavailableException.class)
-    public ProblemDetail handleServiceUnavailableException(ServiceUnavailableException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+    @ExceptionHandler({
+            ServiceUnavailableException.class,
+            org.springframework.transaction.CannotCreateTransactionException.class,
+            org.springframework.dao.DataAccessException.class
+    })
+    public ProblemDetail handleServiceUnavailableException(Exception ex) {
+        String detail = (ex instanceof ServiceUnavailableException && ex.getMessage() != null)
+                ? ex.getMessage()
+                : "Database unavailable or lock timeout";
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, detail);
         problemDetail.setTitle("Service Unavailable");
         problemDetail.setType(URI.create("urn:problem-type:service-unavailable"));
         problemDetail.setProperty("timestamp", Instant.now());

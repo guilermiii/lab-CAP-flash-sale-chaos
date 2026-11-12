@@ -9,10 +9,14 @@ services:
       POSTGRES_DB: flashsale
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+    # Não expõe porta no host para evitar colisão com porta 5432 existente.
+    # O acesso passa obrigatoriamente pelo Toxiproxy (porta 25432).
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - flashsale-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d flashsale"]
       interval: 5s
@@ -23,8 +27,12 @@ services:
     image: redis:7-alpine
     container_name: flashsale-redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # Não expõe porta no host para evitar colisões.
+    # O acesso passa obrigatoriamente pelo Toxiproxy (porta 26379).
+    expose:
+      - "6379"
+    networks:
+      - flashsale-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -39,14 +47,52 @@ services:
     volumes:
       - ./docker/toxiproxy.json:/config/toxiproxy.json:ro
     ports:
-      - "8474:8474"   # API do Toxiproxy
+      - "8474:8474"   # API REST do Toxiproxy
       - "25432:25432" # Proxy para PostgreSQL
       - "26379:26379" # Proxy para Redis
+    networks:
+      - flashsale-network
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flashsale-backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: toxiproxy
+      DB_PORT: 25432
+      REDIS_HOST: toxiproxy
+      REDIS_PORT: 26379
+      TOXIPROXY_API_URL: http://toxiproxy:8474
+    ports:
+      - "8088:8080" # Porta 8088 no host para evitar conflito com 8080
+    networks:
+      - flashsale-network
+    depends_on:
+      - toxiproxy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: flashsale-frontend
+    restart: unless-stopped
+    ports:
+      - "3005:80" # Porta 3005 no host para evitar conflito com 3000 e 3001
+    networks:
+      - flashsale-network
+    depends_on:
+      - backend
+
+networks:
+  flashsale-network:
+    driver: bridge
 
 volumes:
   postgres_data:
