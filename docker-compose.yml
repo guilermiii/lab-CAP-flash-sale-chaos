@@ -9,8 +9,6 @@ services:
       POSTGRES_DB: flashsale
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    # Não expõe porta no host para evitar colisão com porta 5432 existente.
-    # O acesso passa obrigatoriamente pelo Toxiproxy (porta 25432).
     expose:
       - "5432"
     volumes:
@@ -27,8 +25,6 @@ services:
     image: redis:7-alpine
     container_name: flashsale-redis
     restart: unless-stopped
-    # Não expõe porta no host para evitar colisões.
-    # O acesso passa obrigatoriamente pelo Toxiproxy (porta 26379).
     expose:
       - "6379"
     networks:
@@ -85,6 +81,19 @@ services:
     restart: unless-stopped
     ports:
       - "3005:80" # Porta 3005 no host para evitar conflito com 3000 e 3001
+    networks:
+      - flashsale-network
+    depends_on:
+      - backend
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: flashsale-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9095:9090" # Porta 9095 no host (evita conflito com oci-prometheus na 9090)
     networks:
       - flashsale-network
     depends_on:

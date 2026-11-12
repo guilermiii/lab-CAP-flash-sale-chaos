@@ -4,7 +4,7 @@
 * **Papel:** Especialista de Produto / Tech Product Manager
 * **Público-Alvo do Produto:** Recrutadores Técnicos, Tech Leads e Engenheiros Avaliadores
 * **Autor / Desenvolvedor:** Desenvolvedor Backend / Fullstack Júnior
-* **Stack Principal:** Java 25, Spring Boot 4, PostgreSQL, Redis, Toxiproxy, k6, React, Tailwind CSS, Docker Compose
+* **Stack Principal:** Java 21/25, Spring Boot 3.4/4, PostgreSQL, Redis, Toxiproxy, Prometheus, k6, React, Tailwind CSS, Docker Compose
 
 ---
 
